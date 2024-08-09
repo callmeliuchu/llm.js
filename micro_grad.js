@@ -4,7 +4,9 @@
 function sigmoid(x){
    return 1/(1+Math.exp(-x));
 }
-
+function sigmoid_(x){
+    return (1-sigmoid(x))*sigmoid(x);
+}
 
 class Value{
     constructor(data,name){
@@ -36,12 +38,15 @@ class Value{
             child2.grad = Math.pow(child1.data,child2.data) * Math.log(child1.data) * out;
         }
         if(op == 'sigmoid'){
-            child1.grad = child1.grad + (1-sigmoid(child1.data))*sigmoid(child1.data);
+            child1.grad = child1.grad + out*sigmoid_(child1.data);
         }
         if(op == 'relu'){
             if(child1.data >= 0){
                 child1.grad += out;
             }
+        }
+        if(op == 'log'){
+            child1.grad = child1.grad + out / child1.data;
         }
     }
     operate(op,data){
@@ -70,6 +75,9 @@ class Value{
         }
         if(op == 'sigmoid'){
             res = new Value(sigmoid(this.data));
+        }
+        if(op == 'log'){
+            res = new Value(Math.log(this.data));
         }
         if(res != null){
             res.prev = [this,op,other];
@@ -192,7 +200,7 @@ function zero_grad(params){
 
 function step_grad(params){
     for(let p of params){
-        p.data -= 0.000001 * p.grad;
+        p.data -= 0.0001 * p.grad;
     }
 }
 
@@ -217,6 +225,7 @@ class Linear{
         this.m = m;
         this.n = n;
         this.weights = [];
+        this.bias = new Value(Math.random());
         for(let i=0;i<this.n;i++){
             let arr = []
             for(let j=0;j<this.m;j++){
@@ -233,6 +242,7 @@ class Linear{
             for(let j=0;j<this.m;j++){
                 sum = sum.operate('+',this.weights[i][j].operate('*',x[j]));
             }
+            sum.operate('+',this.bias);
             res.push(sum);
         }
         return res;
@@ -244,6 +254,7 @@ class Linear{
                 ans.push(this.weights[i][j]);
             }
         }
+        ans.push(this.bias);
         return ans;
     }
 }
@@ -260,21 +271,25 @@ function test5(){
 test5();
 
 function relu(input){
+    let ans = [];
     for(let o of input){
-        o.operate('relu',null);
+        ans.push(o.operate('relu',null));
     }
+    return ans;
 }
 
 function sigmoid_f(input){
+    let ans = [];
     for(let o of input){
-        o.operate('sigmoid',null);
+        ans.push(o.operate('sigmoid'));
     }
+    return ans;
 }
 
 class MLP{
     constructor(){
-        this.linear1 = new Linear(2,4);
-        this.linear2 = new Linear(4,1);
+        this.linear1 = new Linear(2,2);
+        this.linear2 = new Linear(2,1);
     }
     forward(x,y){
         // x B,T
@@ -283,10 +298,10 @@ class MLP{
         for(let i=0;i<x.length;i++){
             let _x = x[i]
             _x = this.linear1.forward(_x);
-            relu(_x);
+            _x = sigmoid_f(_x);
             _x = this.linear2.forward(_x);
-            let p = _x[0].operate('sigmoid',null);
-            predicts.push(p);
+            // let p = _x[0].operate('sigmoid',null);
+            predicts.push(_x[0]);
         }
         if(y == null){
             return [null,predicts]
@@ -294,11 +309,27 @@ class MLP{
             let loss = new Value(0);
             for(let i=0;i<y.length;i++){
                 let _y = y[i]
-                let v1 = predicts[i].operate('-',_y);
+                let p = predicts[i].operate('sigmoid');
+                let epsilon = 1e-15
+                if(p < epsilon){
+                    p = epsilon;
+                }
+                if(p > 1-epsilon){
+                    p = 1 - epsilonl;
+                }
+                let _loss = 0
+                if(_y == 1){
+                    _loss = p.operate('log').operate('*',_y).operate('*',-1);
+                }else{
+                    _loss = p.operate('*',-1).operate('+',1).operate('log').operate('*',1-_y).operate('*',-1);
+                }
+                // let v1 = predicts[i].operate('-',_y);
+                // let v1 = predicts[i].operate('-',_y);
                 // let v2 = predicts[i].operate('-',1).operate('*',-1).operate('**',1-_y);
-                // let _loss = v1.operate('*',v2);
-                let _loss = v1.operate('**',2);
+                // let _loss = v1.operate('*',v2).operate('log');
+                // let _loss = v1.operate('**',2);
                 loss = loss.operate("+",_loss);
+                // console.log(log2.data,log1.data,loss.data,_y)
             }
             return [loss,predicts]
         }
@@ -326,10 +357,10 @@ function test6(){
 }
 
 
-function testXO(){
+function testXOR(){
     let x = [
-        [0,0],
-        [0,1],
+        [0.,0.],
+        [1,0],
         [1,1],
         [1,0]
     ];
@@ -341,13 +372,16 @@ function testXO(){
     ];
     let mlp = new MLP();
     let parameters = mlp.parameters();
-    for(let j=0;j<2000000;j++){
+
+
+
+    for(let j=0;j<1000000;j++){
         arr = mlp.forward(x,y);
         loss = arr[0]
         zero_grad(parameters);
         backward(loss);
         step_grad(parameters);
-        if(j % 100 == 0){
+        if(j % 1000 == 0){
             console.log(loss.data);
         }
     }
@@ -355,9 +389,9 @@ function testXO(){
         let _x = x[i];
         let _y = y[i];
         arr = mlp.forward([_x],null);
-        console.log(_x,_y,arr[1][0].data);
+        console.log(_x,_y,arr[1][0].data,arr[1][0].operate('sigmoid').data);
     }
 }
 
 
-testXO();
+testXOR();
