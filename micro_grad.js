@@ -28,6 +28,11 @@ class Value{
             child1.grad = child2.data * Math.pow(child1.data,child2.data-1) * out;
             child2.grad = Math.pow(child1.data,child2.data) * Math.log(child1.data) * out;
         }
+        if(op == 'relu'){
+            if(child1.data >= 0){
+                child1.grad += out;
+            }
+        }
     }
     operate(op,data){
         let res = null;
@@ -49,6 +54,9 @@ class Value{
         }
         if(op == '**'){
             res = new Value(Math.pow(this.data,other.data));
+        }
+        if(op == 'relu'){
+            res = new Value(Math.max(0,this.data));
         }
         if(res != null){
             res.prev = [this,op,other];
@@ -163,6 +171,17 @@ class Nerous{
 }
 
 
+function zero_grad(params){
+    for(let p of params){
+        p.grad  = 0;
+    }
+}
+
+function step_grad(params){
+    for(let p of params){
+        p.data -= 0.001 * p.grad;
+    }
+}
 
 function test4(){
     let model = new Nerous();
@@ -172,75 +191,102 @@ function test4(){
 
     for(let i=0;i<1000;i++){
         let loss = model.forward(x,y);
-        for(let p of params){
-            p.grad  = 0;
-        }
+        zero_grad(params);
         backward(loss);
-        for(let p of params){
-            p.data -= 0.001 * p.grad;
-        }
+        step_grad(params);
         console.log(x,y,loss.data);
     }
 }
 
-test4()
 
-// test3();
+class Linear{
+    constructor(m,n){
+        this.m = m;
+        this.n = n;
+        this.weights = [];
+        for(let i=0;i<this.n;i++){
+            let arr = []
+            for(let j=0;j<this.m;j++){
+                arr.push(new Value(1));
+            }
+            this.weights.push(arr);
+        }
+    }
+    forward(x){
+        // (m,1) ==> (n,1)
+        let res = [];
+        for(let i=0;i<this.n;i++){
+            let sum = new Value(0);
+            for(let j=0;j<this.m;j++){
+                sum = sum.operate('+',this.weights[i][j].operate('*',x[j]));
+            }
+            res.push(sum);
+        }
+        return res;
+    }
+    parameters(){
+        let ans = [];
+        for(let i=0;i<this.n;i++){
+            for(let j=0;j<this.m;j++){
+                ans.push(this.weights[i][j]);
+            }
+        }
+        return ans;
+    }
+}
+
+function test5(){
+    let linear = new Linear(5,4);
+    let hidden = linear.forward([1,2,4,6,7]);
+    let linear2 = new Linear(4,1);
+    console.log(hidden.length,hidden[1].data);
+    let output = linear2.forward(hidden);
+    console.log(output.length,output[0].data);
+}
+
+test5();
+
+function relu(input){
+    for(let o of input){
+        o.operate('relu',null);
+    }
+}
+
+class MLP{
+    constructor(){
+        this.linear1 = new Linear(5,4);
+        this.linear2 = new Linear(4,1);
+    }
+    forward(x,y){
+        x = this.linear1.forward(x);
+        relu(x);
+        x = this.linear2.forward(x);
+        let val = x[0];
+        let loss = val.operate('-',y).operate('**',2);
+        return loss;
+    }
+    parameters(){
+        let ans1 = this.linear1.parameters();
+        let ans2 = this.linear2.parameters();
+        return ans1.concat(ans2);
+    }
+}
 
 
-// class Linear{
-//     constructor(m,n,bias){
-//         this.m = m;
-//         this.n = n;
-//         this.bias = bias;
-//         this.weights = [];
-//         for(let i=0;i<this.m;i++){
-//             let arr = []
-//             for(let j=0;j<this.n;j++){
-//                 arr.push(Value(1));
-//             }
-//             this.weights.push(arr);
-//         }
-//     }
-//     forward(x){
-//         res = []
-//         for(let i=0;i<x.lenght;i++){
-//             sum = Value(0);
-//             for(let j=0;j<x[i].length;j++){
-//                 sum.operate('+',x[i][j].operate('*',this.weights[j]))
-//             }
-//             res.push(sum);
-//         }
-//         return res;
-//     }
-// }
-
-// class MLP{
-//     constructor(){
-//         this.linear1 = Linear(5,4,false);
-//         this.linear2 = Linear(4,1,false);
-//     }
-//     forward(x,y){
-//         x = this.linear1(x)
-//         x = x.tanh();
-//         x = this.linear2(x);
-//         return x;
-//     }
-// }
+function test6(){
+    let mlp = new MLP();
+    let parameters = mlp.parameters();
+    let x = [1,2,3,4,5];
+    let y = 1;
+    for(let i=0;i<10;i++){
+        let loss = mlp.forward(x,y);
+        zero_grad(parameters);
+        backward(loss);
+        step_grad(parameters);
+        console.log(loss.data);
+    }
+}
 
 
-// x = []
-// y = []
-
-
-// mlp = NLP()
-// parameters = []
-// for(let i=0;i<10;i++){
-//     loss = mlp(x,y);
-//     parameters.zero_grad();
-//     loss.backward();
-//     print(loss);
-//     parameters.step();
-// }
 
 
