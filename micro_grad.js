@@ -85,17 +85,6 @@ class Value{
         return res;
     }
 }
- 
-// (x1+x2)*x3 + x4 + x1= l
-
-// l_x1 = 1
-// l_x4 = 1
-// l_x123 = 1
-// x123_x1 = x3
-// x123_x2 = x1
-// l_x123_x1 = 1 * x1
-
-// l_x1 = 1 + 1 * x1
 
 function test2(){
     v1 =new  Value(3,'v1');
@@ -323,13 +312,7 @@ class MLP{
                 }else{
                     _loss = p.operate('*',-1).operate('+',1).operate('log').operate('*',1-_y).operate('*',-1);
                 }
-                // let v1 = predicts[i].operate('-',_y);
-                // let v1 = predicts[i].operate('-',_y);
-                // let v2 = predicts[i].operate('-',1).operate('*',-1).operate('**',1-_y);
-                // let _loss = v1.operate('*',v2).operate('log');
-                // let _loss = v1.operate('**',2);
                 loss = loss.operate("+",_loss);
-                // console.log(log2.data,log1.data,loss.data,_y)
             }
             return [loss,predicts]
         }
