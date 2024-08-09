@@ -42,7 +42,7 @@ class Value{
         }
         if(op == 'relu'){
             if(child1.data >= 0){
-                child1.grad += out;
+                child1.grad = child1.grad + out;
             }
         }
         if(op == 'log'){
@@ -71,7 +71,11 @@ class Value{
             res = new Value(Math.pow(this.data,other.data));
         }
         if(op == 'relu'){
-            res = new Value(Math.max(0,this.data));
+            if(this.data > 0){
+                res = new Value(this.data);
+            }else{
+                res = new Value(0);
+            }
         }
         if(op == 'sigmoid'){
             res = new Value(sigmoid(this.data));
@@ -231,9 +235,10 @@ class Linear{
             for(let j=0;j<this.m;j++){
                 sum = sum.operate('+',this.weights[i][j].operate('*',x[j]));
             }
-            sum.operate('+',this.bias);
+            sum = sum.operate('+',this.bias);
             res.push(sum);
         }
+        // console.log('summmm',res[0].data,this.bias.data)
         return res;
     }
     parameters(){
@@ -287,9 +292,12 @@ class MLP{
         for(let i=0;i<x.length;i++){
             let _x = x[i]
             _x = this.linear1.forward(_x);
-            _x = sigmoid_f(_x);
+            // console.log('zzz',_x[0].data);
+            _x = relu(_x);
+            // console.log('yyy',_x[0].data);
             _x = this.linear2.forward(_x);
             // let p = _x[0].operate('sigmoid',null);
+            // console.log('xxxx',_x[0].data);
             predicts.push(_x[0]);
         }
         if(y == null){
@@ -355,10 +363,13 @@ function testXOR(){
     ];
     let mlp = new MLP();
     let parameters = mlp.parameters();
-
-
-
-    for(let j=0;j<1000000;j++){
+    // for(let i=0;i<x.length;i++){
+    //     let _x = x[i];
+    //     let _y = y[i];
+    //     arr = mlp.forward([_x],null);
+    //     console.log(_x,_y,arr[1][0].data,arr[1][0].operate('sigmoid').data);
+    // }
+    for(let j=0;j<100000;j++){
         arr = mlp.forward(x,y);
         loss = arr[0]
         zero_grad(parameters);
