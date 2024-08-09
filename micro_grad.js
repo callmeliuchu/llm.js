@@ -32,7 +32,7 @@ class Value{
     operate(op,data){
         let res = null;
         let other = data;
-        if(!data instanceof Value){
+        if(!(data instanceof Value)){
             other = new Value(data);
         }
         if(op == '+'){
@@ -47,7 +47,7 @@ class Value{
         if(op == '/'){
             res = new Value(this.data / other.data);
         }
-        if(op=='**'){
+        if(op == '**'){
             res = new Value(Math.pow(this.data,other.data));
         }
         if(res != null){
@@ -78,7 +78,9 @@ function test2(){
 
 function post_travel(obj){
     ans = []
+    visited = new Set()
     function f(obj){
+        visited.add(obj);
         prev = obj.prev
         if(prev != null && prev.length == 3){
             child1 = prev[0];
@@ -86,7 +88,9 @@ function post_travel(obj){
             child2 = prev[2];
             children = [child1,child2];
             for(o of children){
-                f(o);
+                if(!visited.has(o)){
+                  f(o);
+                }
             }
         }
         ans.push(obj);
@@ -134,14 +138,54 @@ function test3(){
     let v2 =new Value(2.1,'v2');
     let v3 = v1.operate('*',v2);
     v3.name = 'v3';
-    backward(v3);
-    let res = post_travel(v3);
+    let v4 = v2.operate('+',v3);
+    v4.name = 'v4';
+    let v5 = v4.operate('*',v3);
+    v5.name = 'v5';
+    backward(v5);
+    let res = post_travel(v5);
     for(let o of res){
         console.log(o.name,o.grad);
     }
 }
 
-test3();
+class Nerous{
+    constructor(){
+        this.v1 =new  Value(1,'v1');
+    }
+    forward(x,y){
+        let loss = this.v1.operate('*',x).operate('-',y).operate('**',2);
+        return loss;
+    }
+    parameters(){
+        return [this.v1];
+    }
+}
+
+
+
+function test4(){
+    let model = new Nerous();
+    let x = 3;
+    let y = 20;
+    let params = model.parameters();
+
+    for(let i=0;i<1000;i++){
+        let loss = model.forward(x,y);
+        for(let p of params){
+            p.grad  = 0;
+        }
+        backward(loss);
+        for(let p of params){
+            p.data -= 0.001 * p.grad;
+        }
+        console.log(x,y,loss.data);
+    }
+}
+
+test4()
+
+// test3();
 
 
 // class Linear{
