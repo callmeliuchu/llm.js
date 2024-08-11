@@ -48,6 +48,9 @@ class Value{
         if(op == 'log'){
             child1.grad = child1.grad + out / child1.data;
         }
+        if(op == 'exp'){
+            child1.grad = child1.grad + out * Math.exp(child1.data);
+        }
     }
     operate(op,data){
         let res = null;
@@ -82,6 +85,9 @@ class Value{
         }
         if(op == 'log'){
             res = new Value(Math.log(this.data));
+        }
+        if(op == 'exp'){
+            res = new Value(Math.exp(this.data));
         }
         if(res != null){
             res.prev = [this,op,other];
@@ -280,6 +286,22 @@ function sigmoid_f(input){
     return ans;
 }
 
+
+function softmax(input){
+    let ans = [];
+    let sum = new Value(0);
+    for(let o of input){
+        let tmp = o.operate('exp');
+        sum = sum.operate('+',tmp);
+        ans.push(tmp);
+    }
+    for(let i=0;i<ans.length;i++){
+        ans[i] = ans[i].operate('/',sum);
+    }
+    return ans;
+}
+
+
 class MLP{
     constructor(){
         this.linear1 = new Linear(2,2);
@@ -333,6 +355,47 @@ class MLP{
 }
 
 
+class MLPSoftmax{
+    constructor(){
+        this.linear1 = new Linear(2,2);
+        this.linear2 = new Linear(2,2);
+    }
+    forward(x,y){
+        // x B,T
+        // y B
+        let predicts = []; // B 2
+        for(let i=0;i<x.length;i++){
+            let _x = x[i]
+            _x = this.linear1.forward(_x);
+            // console.log('zzz',_x[0].data);
+            _x = relu(_x);
+            // console.log('yyy',_x[0].data);
+            _x = this.linear2.forward(_x);
+            // let p = _x[0].operate('sigmoid',null);
+            // console.log('xxxx',_x[0].data);
+            _x = softmax(_x)
+            predicts.push(_x)
+        }
+        if(y == null){
+            return [null,predicts]
+        }else{
+            let loss = new Value(0);
+            for(let i=0;i<y.length;i++){
+                let logit = predicts[i][y[i]].operate('log')
+                loss = loss.operate("-",logit);
+            }
+            return [loss,predicts]
+        }
+    }
+    parameters(){
+        let ans1 = this.linear1.parameters();
+        let ans2 = this.linear2.parameters();
+        return ans1.concat(ans2);
+    }
+}
+
+
+
 function test6(){
     let mlp = new MLP();
     let parameters = mlp.parameters();
@@ -361,7 +424,7 @@ function testXOR(){
         0,
         1
     ];
-    let mlp = new MLP();
+    let mlp = new MLPSoftmax();
     let parameters = mlp.parameters();
     // for(let i=0;i<x.length;i++){
     //     let _x = x[i];
@@ -369,7 +432,7 @@ function testXOR(){
     //     arr = mlp.forward([_x],null);
     //     console.log(_x,_y,arr[1][0].data,arr[1][0].operate('sigmoid').data);
     // }
-    for(let j=0;j<100000;j++){
+    for(let j=0;j<1000000;j++){
         arr = mlp.forward(x,y);
         loss = arr[0]
         zero_grad(parameters);
@@ -383,7 +446,7 @@ function testXOR(){
         let _x = x[i];
         let _y = y[i];
         arr = mlp.forward([_x],null);
-        console.log(_x,_y,arr[1][0].data,arr[1][0].operate('sigmoid').data);
+        console.log(_x,_y,arr[1][0][_y].data);
     }
 }
 
