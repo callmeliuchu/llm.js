@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="micro_grad.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canvas Drawing</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="myCanvas" width="500" height="500"></canvas>
+
+    <script>
+        const canvas = document.getElementById('myCanvas');
+        const ctx = canvas.getContext('2d');
+        const data = [
+            {x: 0.0, y: 0.0, color: 'red'},
+            {x: 1.0, y: 1.0, color: 'red'},
+            {x: 1.0, y: 0.0, color: 'green'},
+            {x: 0.0, y: 1.0, color: 'green'},
+            // Add more initial points here if needed
+        ];
+        let w = canvas.width;
+        let h = canvas.height;
+
+        function convert2train_data(data){
+            let x = [];
+            let y = [];
+            for(let o of data){
+                x.push([o['x'],o['y']]);
+                if(o['color'] == 'red'){
+                    y.push(0);
+                }else{
+                    y.push(1);
+                }
+            }
+            return [x,y];
+        }
+
+        train_xy = convert2train_data(data)
+        tx = train_xy[0]
+        ty = train_xy[1]
+        model = train_model(tx,ty)
+
+
+        function convert2render_data(x,y){
+            let ans = [];
+            for(let i=0;i<x.length;i++){
+                let _x = x[i][0]*w;
+                let _y = x[i][1]*h;
+                let _c = null;
+                if(y[i] > 0.5){
+                    _c = 'green';
+                }else{
+                    _c = 'red';
+                }
+                ans.push({x:_x,y:_y,color:_c});
+            }
+            return ans;
+        }
+
+
+        // 函数：计算基于坐标 (x, y) 的值
+        function calculateValue(x, y) {
+            // 这里使用一个简单的函数作为例子：将坐标的平方和转换为灰度值
+            const value = Math.sqrt(x * x + y * y) % 256; // 返回 0-255 之间的值
+            return value;
+        }
+
+        function render_xy(x,y){
+            _x = [x/w,y/h]
+            arr = model.forward([_x],null);
+            predict = arr[1][0]
+            // console.log(x,y,x/w,y/h,predict[0],predict[1]);
+            if(predict[0].data > predict[1].data){
+                return [255,0,0]
+            }else{
+                return [0,255,0]
+            }
+        }
+
+        // // 函数：将计算的值绘制到 canvas 上
+        function drawCanvas() {
+            const imageData = ctx.createImageData(canvas.width, canvas.height);
+            for (let y = 0; y < canvas.height; y++) {
+                for (let x = 0; x < canvas.width; x++) {
+                    const index = (y * canvas.width + x) * 4;
+                    const value = render_xy(x, y); // 获取灰度值
+
+                    imageData.data[index] = value[0];      // Red
+                    imageData.data[index + 1] = value[1];  // Green
+                    imageData.data[index + 2] = value[2];  // Blue
+                    imageData.data[index + 3] = 122;    // Alpha (不透明)
+                }
+            }
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        // drawCanvas();
+
+        // Function to draw all points on the canvas
+        function drawPoints() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+            drawCanvas();
+            data.forEach(point => {
+                ctx.fillStyle = point.color;
+                ctx.beginPath();
+                ctx.arc(point.x * w, point.y * h, 5, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        // Initial drawing
+        drawPoints();
+
+        // Function to handle canvas click event
+        canvas.addEventListener('click', function(event) {
+            const rect = canvas.getBoundingClientRect();
+            const x = (event.clientX - rect.left)/w;
+            const y = (event.clientY - rect.top)/h;
+            const color = 'black'; // Default color for new points
+            data.push({x, y, color});
+            drawPoints(); // Redraw the canvas with the new point
+        });
+    </script>
+</body>
+</html>
