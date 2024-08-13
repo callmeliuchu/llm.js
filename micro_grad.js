@@ -198,7 +198,7 @@ function sigmoid(x){
  
  function step_grad(params){
      for(let p of params){
-         p.data -= 0.0005 * p.grad;
+         p.data -= 0.005 * p.grad;
      }
  }
  
@@ -415,18 +415,6 @@ function sigmoid(x){
  
  
  function train_model(x,y){
-     // let x = [
-     //     [0.,0.],
-     //     [1,0],
-     //     [1,1],
-     //     [0,1]
-     // ];
-     // let y = [
-     //     1,
-     //     0,
-     //     1,
-     //     0
-     // ];
      let mlp = new MLPSoftmax();
      let parameters = mlp.parameters();
      // for(let i=0;i<x.length;i++){
@@ -435,7 +423,7 @@ function sigmoid(x){
      //     arr = mlp.forward([_x],null);
      //     console.log(_x,_y,arr[1][0][0].data);
      // }
-     for(let j=0;j<200000;j++){
+     for(let j=0;j<20000;j++){
          arr = mlp.forward(x,y);
          loss = arr[0]
          zero_grad(parameters);
@@ -453,3 +441,18 @@ function sigmoid(x){
      }
      return mlp;
  }
+
+let x = [
+    [0.,0.],
+    [1,0],
+    [1,1],
+    [0,1]
+];
+let y = [
+    1,
+    0,
+    1,
+    0
+];
+
+train_model(x,y)
