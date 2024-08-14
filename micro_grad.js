@@ -255,7 +255,7 @@ function sigmoid(x){
          }
          ans.push(this.bias);
          return ans;
-     }
+     } 
  } 
  
  function test5(){
