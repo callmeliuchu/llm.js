@@ -256,7 +256,7 @@ function sigmoid(x){
          ans.push(this.bias);
          return ans;
      }
- }
+ } 
  
  function test5(){
      let linear = new Linear(5,4);
@@ -359,8 +359,8 @@ function sigmoid(x){
  
  class MLPSoftmax{
      constructor(){
-         this.linear1 = new Linear(2,4);
-         this.linear2 = new Linear(4,2);
+         this.linear1 = new Linear(2,3);
+         this.linear2 = new Linear(3,2);
      }
      forward(x,y){
          // x B,T
