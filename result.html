@@ -41,11 +41,6 @@
             return [x,y];
         }
 
-        train_xy = convert2train_data(data)
-        tx = train_xy[0]
-        ty = train_xy[1]
-        model = train_model(tx,ty)
-
 
         function convert2render_data(x,y){
             let ans = [];
@@ -71,17 +66,116 @@
             return value;
         }
 
-        function render_xy(x,y){
-            _x = [x/w,y/h]
-            arr = model.forward([_x],null);
-            predict = arr[1][0]
-            // console.log(x,y,x/w,y/h,predict[0],predict[1]);
-            if(predict[0].data > predict[1].data){
-                return [255,0,0]
-            }else{
-                return [0,255,0]
+        // function render_xy(x,y){
+        //     _x = [x/w,y/h]
+        //     arr = model.forward([_x],null);
+        //     predict = arr[1][0]
+        //     // console.log(x,y,x/w,y/h,predict[0],predict[1]);
+        //     if(predict[0].data > predict[1].data){
+        //         return [255,0,0]
+        //     }else{
+        //         return [0,255,0]
+        //     }
+        // }
+
+        // function render_picture(width,height) {
+        //     for (let y = 0; y < height; y++) {
+        //         for (let x = 0; x < width; x++) {
+
+        //         }
+        //     }
+        // }
+
+
+        // // 函数：将计算的值绘制到 canvas 上
+        function mapping2canvas(data_arr) {
+            let data_h = data_arr.length;
+            let data_w = data_arr[0].length;
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+            const imageData = ctx.createImageData(canvas.width, canvas.height);
+            for (let y = 0; y < canvas.height; y++) {
+                let _y = Math.floor(y / canvas.height * data_h);
+                for (let x = 0; x < canvas.width; x++) {
+                    let _x = Math.floor(x / canvas.width * data_w);
+                    let v = data_arr[_y][_x];
+                    const index = (y * canvas.width + x) * 4;
+                    if(v == 0){
+                        imageData.data[index] = 255;      // Red
+                        imageData.data[index + 1] = 0;  // Green
+                        imageData.data[index + 2] = 0;  // Blue
+                    }else{
+                        imageData.data[index] = 0;      // Red
+                        imageData.data[index + 1] = 255;  // Green
+                        imageData.data[index + 2] = 0;  // Blue
+                    }
+                    imageData.data[index + 3] = 122;    // Alpha (不透明)
+                }
             }
+            ctx.putImageData(imageData, 0, 0);
+
+
         }
+
+
+         
+        async function train_model(x,y){
+            let mlp = new MLPSoftmax();
+            let parameters = mlp.parameters();
+            let _h = 100;
+            let _w = 100;
+            data_arr_x = []
+            // data_arr_y = []
+            for(let y=0;y<_h;y++){
+                let arr = []
+                for(let x=0;x<_w;x++){
+                    data_arr_x.push([x/_w,y/_h]);
+                }
+            }
+            for(let j=0;j<60000;j++){
+                arr = mlp.forward(x,y);
+                loss = arr[0]
+                zero_grad(parameters);
+                backward(loss);
+                step_grad(parameters);
+                if(j % 100 == 0){
+                    res = mlp.forward(data_arr_x,null)
+                    data_arr = []
+                    let count = 0
+                    for(let y=0;y<_h;y++){
+                        let arr = []
+                        for(let x=0;x<_w;x++){
+                            if(res[1][count][0].data > res[1][count][1].data){
+                                arr.push(0);
+                            }else{
+                                arr.push(1);
+                            }
+                            count++;
+                        }
+                        data_arr.push(arr);
+                    }
+                    // console.log(data_arr)
+                    mapping2canvas(data_arr);
+                    console.log(loss.data);
+                    await new Promise(resolve => setTimeout(resolve, 100)); // 100ms 的延迟，可根据需要调整
+
+                }
+            }
+            for(let i=0;i<x.length;i++){
+                let _x = x[i];
+                let _y = y[i];
+                arr = mlp.forward([_x],null);
+                console.log(_x,_y,arr[1][0][_y].data);
+            }
+            return mlp;
+        }
+
+        train_xy = convert2train_data(data)
+        tx = train_xy[0]
+        ty = train_xy[1]
+        model = train_model(tx,ty)
+
+
+
 
         // // 函数：将计算的值绘制到 canvas 上
         function drawCanvas() {
@@ -114,8 +208,11 @@
             });
         }
 
+
+
+
         // Initial drawing
-        drawPoints();
+        // drawPoints();
 
         // Function to handle canvas click event
         canvas.addEventListener('click', function(event) {
