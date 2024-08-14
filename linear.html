@@ -25,172 +25,60 @@
             [0.5,0.95]
             // Add more initial points here if needed
         ];
+        // const data = [
+        //     [1,2],
+        //     [2,4.5],
+        //     [3,6.5],
+        //     [4,8],
+        //     [5,9.5]
+        //     // Add more initial points here if needed
+        // ];
+
         let w = canvas.width;
         let h = canvas.height;
 
         function convert2train_data(data){
-            let x = [];
-            let y = [];
+            let x = []
+            let y = []
             for(let o of data){
-                x.push([o['x'],o['y']]);
-                if(o['color'] == 'red'){
-                    y.push(0);
-                }else{
-                    y.push(1);
-                }
+                x.push(o[0]);
+                y.push(o[1]);
             }
             return [x,y];
         }
 
 
-        function convert2render_data(x,y){
-            let ans = [];
-            for(let i=0;i<x.length;i++){
-                let _x = x[i][0]*w;
-                let _y = x[i][1]*h;
-                let _c = null;
-                if(y[i] > 0.5){
-                    _c = 'green';
-                }else{
-                    _c = 'red';
-                }
-                ans.push({x:_x,y:_y,color:_c});
-            }
-            return ans;
-        }
-
-
-        // 函数：计算基于坐标 (x, y) 的值
-        function calculateValue(x, y) {
-            // 这里使用一个简单的函数作为例子：将坐标的平方和转换为灰度值
-            const value = Math.sqrt(x * x + y * y) % 256; // 返回 0-255 之间的值
-            return value;
-        }
-
-        // // 函数：将计算的值绘制到 canvas 上
-        function mapping2canvas(data_arr) {
-            let data_h = data_arr.length;
-            let data_w = data_arr[0].length;
-            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
-            const imageData = ctx.createImageData(canvas.width, canvas.height);
-            for (let y = 0; y < canvas.height; y++) {
-                let _y = Math.floor(y / canvas.height * data_h);
-                for (let x = 0; x < canvas.width; x++) {
-                    let _x = Math.floor(x / canvas.width * data_w);
-                    let v = data_arr[_y][_x];
-                    const index = (y * canvas.width + x) * 4;
-                    if(v == 0){
-                        imageData.data[index] = 255;      // Red
-                        imageData.data[index + 1] = 0;  // Green
-                        imageData.data[index + 2] = 0;  // Blue
-                    }else{
-                        imageData.data[index] = 0;      // Red
-                        imageData.data[index + 1] = 255;  // Green
-                        imageData.data[index + 2] = 0;  // Blue
-                    }
-                    imageData.data[index + 3] = 122;    // Alpha (不透明)
-                }
-            }
-            ctx.putImageData(imageData, 0, 0);
-        }
-
-
-         
-        async function train_model(x,y){
-            let mlp = new MLPSoftmax();
-            let parameters = mlp.parameters();
-            let _h = 300;
-            let _w = 300;
-            data_arr_x = []
-            // data_arr_y = []
-            for(let y=0;y<_h;y++){
-                let arr = []
-                for(let x=0;x<_w;x++){
-                    data_arr_x.push([x/_w,y/_h]);
-                }
-            }
-            for(let j=0;j<90000;j++){
-                arr = mlp.forward(x,y);
-                loss = arr[0]
-                zero_grad(parameters);
-                backward(loss);
-                step_grad(parameters);
-                if(j % 100 == 0){
-                    res = mlp.forward(data_arr_x,null)
-                    data_arr = []
-                    let count = 0
-                    for(let y=0;y<_h;y++){
-                        let arr = []
-                        for(let x=0;x<_w;x++){
-                            if(res[1][count][0].data > res[1][count][1].data){
-                                arr.push(0);
-                            }else{
-                                arr.push(1);
-                            }
-                            count++;
-                        }
-                        data_arr.push(arr);
-                    }
-                    // console.log(data_arr)
-                    mapping2canvas(data_arr);
-                    console.log(loss.data);
-                    await new Promise(resolve => setTimeout(resolve, 10)); // 100ms 的延迟，可根据需要调整
-
-                }
-            }
-            for(let i=0;i<x.length;i++){
-                let _x = x[i];
-                let _y = y[i];
-                arr = mlp.forward([_x],null);
-                console.log(_x,_y,arr[1][0][_y].data);
-            }
-            return mlp;
-        }
-
         train_xy = convert2train_data(data)
         tx = train_xy[0]
         ty = train_xy[1]
-        model = train_model(tx,ty)
+        model = train_linear(tx,ty)
 
 
 
-
-        // // 函数：将计算的值绘制到 canvas 上
-        function drawCanvas() {
-            const imageData = ctx.createImageData(canvas.width, canvas.height);
-            for (let y = 0; y < canvas.height; y++) {
-                for (let x = 0; x < canvas.width; x++) {
-                    const index = (y * canvas.width + x) * 4;
-                    const value = render_xy(x, y); // 获取灰度值
-
-                    imageData.data[index] = value[0];      // Red
-                    imageData.data[index + 1] = value[1];  // Green
-                    imageData.data[index + 2] = value[2];  // Blue
-                    imageData.data[index + 3] = 122;    // Alpha (不透明)
-                }
-            }
-            ctx.putImageData(imageData, 0, 0);
-        }
-
-        // drawCanvas();
-
-        // Function to draw all points on the canvas
-        function drawPoints(data) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
-            drawCanvas();
+        function drawPoints(data,color,r) {
+            // ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
             data.forEach(point => {
-                ctx.fillStyle = point.color;
+                ctx.fillStyle = color;
                 ctx.beginPath();
-                ctx.arc(point.x * w, point.y * h, 5, 0, Math.PI * 2);
+                ctx.arc(point[0] * w, point[1] * h, r, 0, Math.PI * 2);
                 ctx.fill();
             });
         }
 
 
 
-
         // Initial drawing
-        // drawPoints();
+        drawPoints(data,'red',10);
+        let _data = [];
+        let N = w;
+        for(let i=0;i<N;i++){
+            let x = i / N;
+            let y = model.forward([x]);
+            _data.push([x,y[0].data]);
+        }
+        // console.log(_data);
+
+        drawPoints(_data,'black',1);
 
         // Function to handle canvas click event
         canvas.addEventListener('click', function(event) {

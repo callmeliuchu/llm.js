@@ -442,17 +442,49 @@ function sigmoid(x){
      return mlp;
  }
 
-// let x = [
-//     [0.,0.],
-//     [1,0],
-//     [1,1],
-//     [0,1]
-// ];
-// let y = [
-//     1,
-//     0,
-//     1,
-//     0
-// ];
+function train_linear(x,y){
+    let model = new Linear(1,1);
+    let params = model.parameters()
+    for(let p=0;p<1000;p++){
+        let loss = new Value(0);
+        for(let i=0;i<x.length;i++){
+            let _x = x[i];
+            let _y = y[i];
+            let pred = model.forward([_x]);
+            let error = pred[0].operate('-',_y).operate('**',2)
+            // console.log('error',error.data,pred[i].data);
+            loss = loss.operate('+',error);
+        }
+        zero_grad(params);
+        backward(loss);
+        step_grad(params);
+        console.log(loss.data);
+    }
+    console.log(params);
+    return model;
+}
 
-// train_model(x,y)
+
+function test_train_linear(){
+    const data = [
+        [0.1,0.2],
+        [0.2,0.45],
+        [0.3,0.65],
+        [0.4,0.8],
+        [0.5,0.95]
+        // Add more initial points here if needed
+    ];
+    function convert2train_data(data){
+        let x = []
+        let y = []
+        for(let o of data){
+            x.push(o[0]);
+            y.push(o[1]);
+        }
+        return [x,y];
+    }
+    train_xy = convert2train_data(data)
+    tx = train_xy[0]
+    ty = train_xy[1]
+    model = train_linear(tx,ty)
+}
