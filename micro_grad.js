@@ -1,5 +1,4 @@
 
-
 function sigmoid(x){
     return 1/(1+Math.exp(-x));
  }
@@ -198,7 +197,7 @@ function sigmoid(x){
  
  function step_grad(params){
      for(let p of params){
-         p.data -= 0.0009 * p.grad;
+         p.data -= 0.005 * p.grad;
      }
  }
  
@@ -225,12 +224,12 @@ function sigmoid(x){
          this.weights = [];
          this.bias = [];
          for(let i=0;i<this.n;i++){
-            this.bias.push(new Value(Math.random()*2));
+            this.bias.push(new Value(Math.random()));
          }
          for(let i=0;i<this.n;i++){
              let arr = []
              for(let j=0;j<this.m;j++){
-                 arr.push(new Value(Math.random()*2));
+                 arr.push(new Value(Math.random()));
              }
              this.weights.push(arr);
          }
@@ -256,7 +255,7 @@ function sigmoid(x){
                  ans.push(this.weights[i][j]);
              }
          }
-         ans.concat(this.bias);
+         ans = ans.concat(this.bias);
          return ans;
      } 
  } 
@@ -487,7 +486,7 @@ function sigmoid(x){
 function train_linear(x,y){
     let model = new Linear(1,1);
     let params = model.parameters()
-    for(let p=0;p<1000;p++){
+    for(let p=0;p<10000;p++){
         let loss = new Value(0);
         for(let i=0;i<x.length;i++){
             let _x = x[i];
@@ -502,7 +501,11 @@ function train_linear(x,y){
         step_grad(params);
         console.log(loss.data);
     }
-    console.log(params);
+    console.log("======-----=====");
+    for(let o of params){
+        console.log(o.data);
+    }
+
     return model;
 }
 
