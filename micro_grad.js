@@ -198,7 +198,7 @@ function sigmoid(x){
  
  function step_grad(params){
      for(let p of params){
-         p.data -= 0.005 * p.grad;
+         p.data -= 0.0009 * p.grad;
      }
  }
  
@@ -223,11 +223,14 @@ function sigmoid(x){
          this.m = m;
          this.n = n;
          this.weights = [];
-         this.bias = new Value(Math.random());
+         this.bias = [];
+         for(let i=0;i<this.n;i++){
+            this.bias.push(new Value(Math.random()*2));
+         }
          for(let i=0;i<this.n;i++){
              let arr = []
              for(let j=0;j<this.m;j++){
-                 arr.push(new Value(Math.random()));
+                 arr.push(new Value(Math.random()*2));
              }
              this.weights.push(arr);
          }
@@ -240,7 +243,7 @@ function sigmoid(x){
              for(let j=0;j<this.m;j++){
                  sum = sum.operate('+',this.weights[i][j].operate('*',x[j]));
              }
-             sum = sum.operate('+',this.bias);
+             sum = sum.operate('+',this.bias[i]);
              res.push(sum);
          }
          // console.log('summmm',res[0].data,this.bias.data)
@@ -253,7 +256,7 @@ function sigmoid(x){
                  ans.push(this.weights[i][j]);
              }
          }
-         ans.push(this.bias);
+         ans.concat(this.bias);
          return ans;
      } 
  } 
@@ -359,8 +362,9 @@ function sigmoid(x){
  
  class MLPSoftmax{
      constructor(){
-         this.linear1 = new Linear(2,3);
-         this.linear2 = new Linear(3,2);
+         this.linear1 = new Linear(2,4);
+         this.linear2 = new Linear(4,4);
+         this.linear3 = new Linear(4,2);
      }
      forward(x,y){
          // x B,T
@@ -375,6 +379,10 @@ function sigmoid(x){
              _x = this.linear2.forward(_x);
              // let p = _x[0].operate('sigmoid',null);
              // console.log('xxxx',_x[0].data);
+             _x = sigmoid_f(_x);
+             _x = this.linear3.forward(_x);
+            //  _x = sigmoid_f(_x);
+            //  _x = this.linear4.forward(_x);
              _x = softmax(_x)
              predicts.push(_x)
          }
@@ -392,12 +400,46 @@ function sigmoid(x){
      parameters(){
          let ans1 = this.linear1.parameters();
          let ans2 = this.linear2.parameters();
-         return ans1.concat(ans2);
+         let ans3 = this.linear2.parameters();
+         return ans1.concat(ans2).concat(ans3);
      }
  }
  
  
  
+ class  Logistic{
+    constructor(){
+        this.linear1 = new Linear(2,2);
+    }
+    forward(x,y){
+        // x B,T
+        // y B
+        let predicts = []; // B 2
+        for(let i=0;i<x.length;i++){
+            let _x = x[i]
+            _x = this.linear1.forward(_x);
+            _x = softmax(_x)
+            predicts.push(_x)
+        }
+        if(y == null){
+            return [null,predicts]
+        }else{
+            let loss = new Value(0);
+            for(let i=0;i<y.length;i++){
+                let logit = predicts[i][y[i]].operate('log')
+                loss = loss.operate("-",logit);
+            }
+            return [loss,predicts]
+        }
+    }
+    parameters(){
+        let ans1 = this.linear1.parameters();
+        return ans1;
+    }
+}
+
+
+
  function test6(){
      let mlp = new MLPSoftmax();
      let parameters = mlp.parameters();
@@ -487,4 +529,27 @@ function test_train_linear(){
     tx = train_xy[0]
     ty = train_xy[1]
     model = train_linear(tx,ty)
+}
+
+
+function train_logistic(x,y){
+    let mlp = new Logistic();
+    let parameters = mlp.parameters();
+    for(let j=0;j<200;j++){
+        arr = mlp.forward(x,y);
+        loss = arr[0]
+        zero_grad(parameters);
+        backward(loss);
+        step_grad(parameters);
+        if(j % 1 == 0){
+            console.log(loss.data);
+        }
+    }
+    for(let i=0;i<x.length;i++){
+        let _x = x[i];
+        let _y = y[i];
+        arr = mlp.forward([_x],null);
+        console.log(_x,_y,arr[1][0][_y].data);
+    }
+    return mlp;
 }
